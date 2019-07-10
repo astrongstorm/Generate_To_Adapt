@@ -107,10 +107,12 @@ class GTA(object):
             self.netG.train()    
             self.netF.train()    
             self.netC.train()    
-            self.netD.train()    
+            self.netD.train()
+
+
         
-            for i, (datas, datat) in enumerate(itertools.izip(self.source_trainloader, self.targetloader)):
-                
+            for i, (datas, datat) in enumerate(zip(self.source_trainloader, self.targetloader)):
+
                 ###########################
                 # Forming input variables
                 ###########################
