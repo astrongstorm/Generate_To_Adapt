@@ -19,6 +19,10 @@ for i in ['trainset', 'testset']:
     for img_num in range(len_loader):
         print(i)
         image, label = next(iter_loader)
-        image_name = dir + '/' + str(label.item() + 1) + '/' + str(img_num) + '.png'
+        if label.item() == 0:
+            folder = 10
+        else:
+            folder = label.item()
+        image_name = dir + '/' + str(folder) + '/' + str(img_num) + '.png'
         print(image_name)
         torchvision.utils.save_image(image, image_name)

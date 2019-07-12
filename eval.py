@@ -9,7 +9,10 @@ import models
 import utils
 import os
 import argparse
-
+import usps
+import source_risk
+import dev
+import dev_icml
 def main():
 
     parser = argparse.ArgumentParser()
@@ -24,7 +27,7 @@ def main():
     parser.add_argument('--checkpoint_dir', default='results/models', help='folder to load model checkpoints from')
     parser.add_argument('--method', default='GTA', help='Method to evaluate| GTA, sourceonly')
     parser.add_argument('--model_best', type=int, default=0, help='Flag to specify whether to use the best validation model or last checkpoint| 1-model best, 0-current checkpoint')
-
+    parser.add_argument('--test_adaptation', type=str, default='u->m', choices=['u->m', 'm->u', 's->m'])
     opt = parser.parse_args()
 
     # GPU/CPU flags
@@ -38,13 +41,25 @@ def main():
     mean = np.array([0.44, 0.44, 0.44])
     std = np.array([0.19, 0.19, 0.19])
 
-    target_root = os.path.join(opt.dataroot, 'mnist/trainset')
+    if opt.test_adaptation == 'u->m' or opt.test_adaptation == 's->m':
+        target_root = os.path.join(opt.dataroot, 'mnist/trainset')
 
-    transform_target = transforms.Compose([transforms.Resize(opt.imageSize), transforms.ToTensor(), transforms.Normalize(mean,std)])
-    target_test = dset.ImageFolder(root=target_root, transform=transform_target)
+        transform_target = transforms.Compose(
+            [transforms.Resize(opt.imageSize), transforms.ToTensor(), transforms.Normalize(mean, std)])
+        target_test = dset.ImageFolder(root=target_root, transform=transform_target)
+        nclasses = len(target_test.classes)
+    elif opt.test_adaptation == 'm->u':
+        transform_usps = transforms.Compose(
+            [transforms.Resize(opt.imageSize), transforms.Grayscale(3), transforms.ToTensor(),
+             transforms.Normalize((0.44,), (0.19,))])
+        target_test = usps.USPS(root=opt.dataroot, train=True, transform=transform_usps, download=True)
+        nclasses = 10
+    # target_root = os.path.join(opt.dataroot, 'mnist/trainset')
+    #
+    # transform_target = transforms.Compose([transforms.Resize(opt.imageSize), transforms.ToTensor(), transforms.Normalize(mean,std)])
+    # target_test = dset.ImageFolder(root=target_root, transform=transform_target)
     targetloader = torch.utils.data.DataLoader(target_test, batch_size=opt.batchSize, shuffle=False, num_workers=2)
 
-    nclasses = len(target_test.classes)
     
     # Creating and loading models
     
