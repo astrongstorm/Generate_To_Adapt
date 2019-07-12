@@ -112,7 +112,11 @@ def main():
     source_valloader = torch.utils.data.DataLoader(source_val, batch_size=opt.batchSize, shuffle=False, num_workers=2, drop_last=False)
     targetloader = torch.utils.data.DataLoader(target_train, batch_size=opt.batchSize, shuffle=True, num_workers=2, drop_last=True)
 
-    nclasses = len(source_train.classes)
+    if opt.source == 'usps':
+        nclasses = 10
+    else:
+        nclasses = len(source_train.classes)
+        print(nclasses)
 
     print("Start training")
     
