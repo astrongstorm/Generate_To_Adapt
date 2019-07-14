@@ -6,16 +6,16 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import train_test_split
 import torch.utils.data as util_data
 from data_list import ImageList
-import pre_process as prep
 import torch.nn as nn
 from torch.autograd import Variable
 import seperate_data
-
+from torchvision import transforms
+import models
 
 def predict_loss(cls, y_pre): #requires how the loss is calculated for the preduct value and the ground truth value
     """
     Calculate the cross entropy loss for prediction of one picture
-    :param y:
+    :param cls:
     :param y_pre:
     :return:
     """
@@ -26,7 +26,7 @@ def predict_loss(cls, y_pre): #requires how the loss is calculated for the predu
     return entropy(pre_cls_torch, target)
 
 
-def cross_validation_loss(feature_network, predict_network, src_cls_list, target_path, val_cls_list, class_num, resize_size, crop_size, batch_size, use_gpu):
+def cross_validation_loss(feature_network_path, predict_network_path, src_cls_list, target_path, val_cls_list, class_num, resize_size, crop_size, batch_size, use_gpu, opt):
     """
     Main function for computing the CV loss
     :param feature_network:
@@ -40,11 +40,22 @@ def cross_validation_loss(feature_network, predict_network, src_cls_list, target
     :param batch_size:
     :return:
     """
+    netF = models._netF(opt)
+    netC = models._netC(opt, class_num)
+    netF.load_state_dict(torch.load(feature_network_path))
+    netC.load_state_dict(torch.load(predict_network_path))
+    if use_gpu:
+        netF.cuda()
+        netC.cuda()
+
     val_cls_list = seperate_data.dimension_rd(val_cls_list)
-    prep_dict_val = prep.image_train(resize_size=resize_size, crop_size=crop_size)
+    # prep_dict_val = prep.image_train(resize_size=resize_size, crop_size=crop_size)
+    mean = np.array([0.44, 0.44, 0.44])
+    std = np.array([0.19, 0.19, 0.19])
+    transform_target = transforms.Compose([transforms.Resize(resize_size), transforms.ToTensor(), transforms.Normalize(mean, std)])
     # load different class's image
-    dsets_val = ImageList(val_cls_list, transform=prep_dict_val)
-    dset_loaders_val = util_data.DataLoader(dsets_val, batch_size=batch_size, shuffle=True, num_workers=4)
+    dsets_val = ImageList(val_cls_list, transform=transform_target)
+    dset_loaders_val = util_data.DataLoader(dsets_val, batch_size=batch_size, shuffle=False, num_workers=2)
 
     # prepare validation feature and predicted label for validation
     iter_val = iter(dset_loaders_val)
@@ -54,7 +65,11 @@ def cross_validation_loss(feature_network, predict_network, src_cls_list, target
     else:
         val_input, val_labels = Variable(val_input), Variable(val_labels)
 
-    _, pred_label = predict_network(val_input)
+    pred_label = netC(netF(val_input))
+    print(pred_label)
+    print(pred_label.shape)
+    # _, pred_label = torch.max(outC.data, 1)
+    # _, pred_label = predict_network(val_input)
 
     w = pred_label[0].shape[0]
 
@@ -74,7 +89,9 @@ def cross_validation_loss(feature_network, predict_network, src_cls_list, target
             val_input, val_labels = Variable(val_input).cuda(), Variable(val_labels).cuda()
         else:
             val_input, val_labels = Variable(val_input), Variable(val_labels)
-        _, pred_label = predict_network(val_input)
+        pred_label = netC(netF(val_input))
+        # _, pred_label = torch.max(outC.data, 1)
+        # _, pred_label = predict_network(val_input)
         for num_image in range(len(pred_label)):
             single_pred_label = pred_label[num_image]
             w = single_pred_label.shape[0]

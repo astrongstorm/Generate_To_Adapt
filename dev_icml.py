@@ -10,6 +10,8 @@ import pre_process as prep
 import torch.nn as nn
 from torch.autograd import Variable
 import seperate_data
+from torchvision import transforms
+import models
 
 def get_dev_risk(weight, error):
     """
@@ -83,7 +85,7 @@ def predict_loss(cls, y_pre): #requires how the loss is calculated for the predu
     return entropy(pre_cls_torch, target)
 
 
-def get_label_list(target_list, predict_network_name, resize_size, crop_size, batch_size, use_gpu):
+def get_label_list(target_list, predict_network_path, feature_network_path, class_num, resize_size, crop_size, batch_size, use_gpu, opt):
     # done with debugging, works fine
     """
     Return the target list with pesudolabel
@@ -95,13 +97,24 @@ def get_label_list(target_list, predict_network_name, resize_size, crop_size, ba
     :return:
     """
     label_list = []
-    net_config = predict_network_name
-    predict_network = net_config["name"](**net_config["params"])
+    # net_config = predict_network_name
+    # predict_network = net_config["name"](**net_config["params"])
+    # if use_gpu:
+    #     predict_network = predict_network.cuda()
+    netF = models._netF(opt)
+    netC = models._netC(opt, class_num)
+    netF.load_state_dict(torch.load(feature_network_path))
+    netC.load_state_dict(torch.load(predict_network_path))
     if use_gpu:
-        predict_network = predict_network.cuda()
+        netF.cuda()
+        netC.cuda()
 
+    mean = np.array([0.44, 0.44, 0.44])
+    std = np.array([0.19, 0.19, 0.19])
+    transform_target = transforms.Compose(
+        [transforms.Resize(resize_size), transforms.ToTensor(), transforms.Normalize(mean, std)])
 
-    dsets_tar = ImageList(target_list, transform=prep.image_train(resize_size=resize_size, crop_size=crop_size))
+    dsets_tar = ImageList(target_list, transform=transform_target)
     dset_loaders_tar = util_data.DataLoader(dsets_tar, batch_size=batch_size, shuffle=True, num_workers=4)
     len_train_target = len(dset_loaders_tar)
     iter_target = iter(dset_loaders_tar)
@@ -112,7 +125,8 @@ def get_label_list(target_list, predict_network_name, resize_size, crop_size, ba
             input_tar, label_tar = Variable(input_tar).cuda(), Variable(label_tar).cuda()
         else:
             input_tar, label_tar = Variable(input_tar), Variable(label_tar)
-        _, predict_score = predict_network(input_tar)
+        predict_score = netC(netF(input_tar))
+        # _, predict_score = predict_network(input_tar)
         _, predict_label = torch.max(predict_score, 1)
         for num in range(len(predict_label.cpu())):
             label_list.append(target_list[count][:-2])
@@ -120,7 +134,7 @@ def get_label_list(target_list, predict_network_name, resize_size, crop_size, ba
             count += 1
     return label_list
 
-def cross_validation_loss(feature_network, predict_network, src_list, target_path, val_list, class_num, resize_size, crop_size, batch_size, use_gpu):
+def cross_validation_loss(feature_network_path, predict_network_path, src_list, target_path, val_list, class_num, resize_size, crop_size, batch_size, use_gpu, opt):
     """
     Main function for computing the CV loss
     :param feature_network:
@@ -134,20 +148,33 @@ def cross_validation_loss(feature_network, predict_network, src_list, target_pat
     :param batch_size:
     :return:
     """
+    netF = models._netF(opt)
+    netC = models._netC(opt, class_num)
+    netF.load_state_dict(torch.load(feature_network_path))
+    netC.load_state_dict(torch.load(predict_network_path))
+    if use_gpu:
+        netF.cuda()
+        netC.cuda()
+
     val_list = seperate_data.dimension_rd(val_list)
 
     tar_list = open(target_path).readlines()
     cross_val_loss = 0
 
-    prep_dict = prep.image_train(resize_size=resize_size, crop_size=crop_size)
+    mean = np.array([0.44, 0.44, 0.44])
+    std = np.array([0.19, 0.19, 0.19])
+    transform_target = transforms.Compose(
+        [transforms.Resize(resize_size), transforms.ToTensor(), transforms.Normalize(mean, std)])
+
+    # prep_dict = prep.image_train(resize_size=resize_size, crop_size=crop_size)
     # load different class's image
     
-    dsets_src = ImageList(src_list, transform=prep_dict)
-    dset_loaders_src = util_data.DataLoader(dsets_src, batch_size=batch_size, shuffle=True, num_workers=4)
-    dsets_val = ImageList(val_list, transform=prep_dict)
-    dset_loaders_val = util_data.DataLoader(dsets_val, batch_size=batch_size, shuffle=True, num_workers=4)
-    dsets_tar = ImageList(tar_list, transform=prep_dict)
-    dset_loaders_tar = util_data.DataLoader(dsets_tar, batch_size=batch_size, shuffle=True, num_workers=4)
+    dsets_src = ImageList(src_list, transform=transform_target)
+    dset_loaders_src = util_data.DataLoader(dsets_src, batch_size=batch_size, shuffle=False, num_workers=2)
+    dsets_val = ImageList(val_list, transform=transform_target)
+    dset_loaders_val = util_data.DataLoader(dsets_val, batch_size=batch_size, shuffle=False, num_workers=2)
+    dsets_tar = ImageList(tar_list, transform=transform_target)
+    dset_loaders_tar = util_data.DataLoader(dsets_tar, batch_size=batch_size, shuffle=False, num_workers=2)
 
     # prepare source feature
     iter_src = iter(dset_loaders_src)
@@ -156,7 +183,8 @@ def cross_validation_loss(feature_network, predict_network, src_list, target_pat
         src_input, src_labels = Variable(src_input).cuda(), Variable(src_labels).cuda()
     else:
         src_input, src_labels = Variable(src_input), Variable(src_labels)
-    src_feature, _ = feature_network(src_input)
+    # src_feature, _ = feature_network(src_input)
+    src_feature = netF(src_input)
     src_feature_de = src_feature.detach().cpu().numpy()
     for _ in range(len(dset_loaders_src) - 1):
         src_input, src_labels = iter_src.next()
@@ -164,7 +192,8 @@ def cross_validation_loss(feature_network, predict_network, src_list, target_pat
             src_input, src_labels = Variable(src_input).cuda(), Variable(src_labels).cuda()
         else:
             src_input, src_labels = Variable(src_input), Variable(src_labels)
-        src_feature_new, _ = feature_network(src_input)
+        # src_feature_new, _ = feature_network(src_input)
+        src_feature_new = netF(src_input)
         src_feature_new_de = src_feature_new.detach().cpu().numpy()
         src_feature_de = np.append(src_feature_de, src_feature_new_de, axis=0)
         # src_feature = torch.cat((src_feature, src_feature_new), 0)
@@ -176,16 +205,21 @@ def cross_validation_loss(feature_network, predict_network, src_list, target_pat
         tar_input, _ = Variable(tar_input).cuda(), Variable(_).cuda()
     else:
         src_input, _ = Variable(tar_input), Variable(_)
-    tar_feature, _ = feature_network(tar_input)
+    # tar_feature, _ = feature_network(tar_input)
+    tar_feature = netF(tar_input)
     tar_feature_de = tar_feature.detach().cpu().numpy()
+    k = 0
     for _ in range(len(dset_loaders_tar) - 1):
+        k = k + 1
+        print(k)
         tar_input, _ = iter_tar.next()
         if use_gpu:
             tar_input, _ = Variable(tar_input).cuda(), Variable(_).cuda()
         else:
             src_input, _ = Variable(tar_input), Variable(_)
-        tar_feature_new, _ = feature_network(tar_input)
-        tar_feature_new_de = src_feature_new.detach().cpu().numpy()
+        # tar_feature_new, _ = feature_network(tar_input)
+        tar_feature_new = netF(tar_input)
+        tar_feature_new_de = tar_feature_new.detach().cpu().numpy()
         tar_feature_de = np.append(tar_feature_de, tar_feature_new_de, axis=0)
         # tar_feature = torch.cat((tar_feature, tar_feature_new), 0)
 
@@ -196,8 +230,10 @@ def cross_validation_loss(feature_network, predict_network, src_list, target_pat
         val_input, val_labels = Variable(val_input).cuda(), Variable(val_labels).cuda()
     else:
         val_input, val_labels = Variable(val_input), Variable(val_labels)
-    val_feature, _ = feature_network(val_input)
-    _, pred_label = predict_network(val_input)
+    # val_feature, _ = feature_network(val_input)
+    # _, pred_label = predict_network(val_input)
+    val_feature = netF(val_input)
+    pred_label = netC(netF(val_input))
     val_feature_de = val_feature.detach().cpu().numpy()
 
     w = pred_label[0].shape[0]
@@ -220,12 +256,13 @@ def cross_validation_loss(feature_network, predict_network, src_list, target_pat
             val_input, val_labels = Variable(val_input).cuda(), Variable(val_labels).cuda()
         else:
             val_input, val_labels = Variable(val_input), Variable(val_labels)
-        val_feature_new, _ = feature_network(val_input)
-
+        # val_feature_new, _ = feature_network(val_input)
+        val_feature_new = netF(val_input)
         val_feature_new_de = val_feature_new.detach().cpu().numpy()
         val_feature_de = np.append(val_feature_de, val_feature_new_de, axis=0)
         # val_feature = torch.cat((val_feature, val_feature_new), 0)
-        _, pred_label = predict_network(val_input)
+        # _, pred_label = predict_network(val_input)
+        pred_label = netC(netF(val_input))
         for num_image in range(len(pred_label)):
             single_pred_label = pred_label[num_image]
             w = single_pred_label.shape[0]

@@ -13,6 +13,7 @@ import usps
 import source_risk
 import dev
 import dev_icml
+import seperate_data as sep
 def main():
 
     parser = argparse.ArgumentParser()
@@ -27,7 +28,9 @@ def main():
     parser.add_argument('--checkpoint_dir', default='results/models', help='folder to load model checkpoints from')
     parser.add_argument('--method', default='GTA', help='Method to evaluate| GTA, sourceonly')
     parser.add_argument('--model_best', type=int, default=0, help='Flag to specify whether to use the best validation model or last checkpoint| 1-model best, 0-current checkpoint')
-    parser.add_argument('--test_adaptation', type=str, default='u->m', choices=['u->m', 'm->u', 's->m'])
+    parser.add_argument('--src_path', type=str, default='digits/server_svhn_list.txt', help='path for source dataset txt file')
+    parser.add_argument('--tar_path', type=str, default='digits/server_mnist_list.txt', help='path for target dataset txt file')
+    parser.add_argument('--val_method', type=str, default='Source_Risk', choices=['Source_Risk', 'Dev_icml', 'Dev'])
     opt = parser.parse_args()
 
     # GPU/CPU flags
@@ -36,19 +39,27 @@ def main():
         print("WARNING: You have a CUDA device, so you should probably run with --gpu [gpu id]")
     if opt.gpu>=0:
         os.environ['CUDA_VISIBLE_DEVICES'] = str(opt.gpu)
+        use_gpu = True
 
     # Creating data loaders
     mean = np.array([0.44, 0.44, 0.44])
     std = np.array([0.19, 0.19, 0.19])
 
-    if opt.test_adaptation == 'u->m' or opt.test_adaptation == 's->m':
+    if 'svhn' in opt.src_path and 'mnist' in opt.tar_path:
+        test_adaptation = 's->m'
+    elif 'usps' in opt.src_path and 'mnist' in opt.tar_path:
+        test_adaptation = 'u->m'
+    else:
+        test_adaptation = 'm->u'
+
+    if test_adaptation == 'u->m' or test_adaptation == 's->m':
         target_root = os.path.join(opt.dataroot, 'mnist/trainset')
 
         transform_target = transforms.Compose(
             [transforms.Resize(opt.imageSize), transforms.ToTensor(), transforms.Normalize(mean, std)])
         target_test = dset.ImageFolder(root=target_root, transform=transform_target)
         nclasses = len(target_test.classes)
-    elif opt.test_adaptation == 'm->u':
+    elif test_adaptation == 'm->u':
         transform_usps = transforms.Compose(
             [transforms.Resize(opt.imageSize), transforms.Grayscale(3), transforms.ToTensor(),
              transforms.Normalize((0.44,), (0.19,))])
@@ -113,7 +124,33 @@ def main():
     test_acc = 100*float(correct)/total
     print('Test Accuracy: %f %%' % (test_acc))
 
+    cls_source_list, cls_validation_list = sep.split_set(opt.src_path, nclasses)
+    source_list = sep.dimension_rd(cls_source_list)
+    # outC = netC(netF(inputv)) 是算 classification的
+    # outF = netF(inputv)) 是算 feature的
+    # netF.load_state_dict(torch.load(netF_path)) 是加载网络的 方式
+    # crop size 不用
+    if opt.val_method == 'Source_Risk':
+        cv_loss = source_risk.cross_validation_loss(netF_path, netC_path, cls_source_list,
+                                                    opt.tar_path, cls_validation_list,
+                                                    nclasses, opt.imageSize,
+                                                    224,
+                                                    opt.batchSize,
+                                                    use_gpu, opt)
+    elif opt.val_method == 'Dev_icml':
+        cv_loss = dev_icml.cross_validation_loss(netF_path, netC_path, source_list,
+                                                 opt.tar_path, cls_validation_list,
+                                                 nclasses, opt.imageSize,
+                                                 224,
+                                                 opt.batchSize,
+                                                 use_gpu, opt)
+    elif opt.val_method == 'Dev':
+        cv_loss = dev.cross_validation_loss(netF_path, netC_path, cls_source_list,
+                                            opt.tar_path, cls_validation_list,
+                                            nclasses, opt.imageSize,
+                                            224, opt.batchSize,
+                                            use_gpu, opt)
+    print(cv_loss)
 
 if __name__ == '__main__':
     main()
-
