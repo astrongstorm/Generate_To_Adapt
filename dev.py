@@ -57,10 +57,10 @@ def get_weight(source_feature, target_feature,
     """
     N_s, d = source_feature.shape
     N_t, _d = target_feature.shape
-    if float(N_s) / N_t > 2:
-        source_feature = random_select_src(source_feature, target_feature)
-    else:
-        source_feature = source_feature.copy()
+    # if float(N_s) / N_t > 2:
+    #     source_feature = random_select_src(source_feature, target_feature)
+    # else:
+    #     source_feature = source_feature.copy()
 
     print('num_source is {}, num_target is {}, ratio is {}\n'.format(N_s, N_t, float(N_s) / N_t))  # check the ratio
 

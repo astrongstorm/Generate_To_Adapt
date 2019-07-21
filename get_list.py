@@ -1,7 +1,7 @@
 import os
 
 count = 0
-for subdir, dirs, files in os.walk('digits/usps'):
+for subdir, dirs, files in os.walk('/work/xuweinan/Visda_Data'):
     for file in files:
         # print(subdir)
         # if count == 0:

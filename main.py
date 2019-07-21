@@ -70,8 +70,7 @@ def main():
     cudnn.benchmark = True
     if torch.cuda.is_available():
         print("WARNING: You have a CUDA device, so you should probably run with --gpu [gpu id]")
-    if opt.gpu>=0:
-        os.environ['CUDA_VISIBLE_DEVICES'] = str(opt.gpu)
+        # os.environ['CUDA_VISIBLE_DEVICES'] = str(opt.gpu)
 
     print("GPU passed")
 
@@ -93,6 +92,8 @@ def main():
         target_train = dset.ImageFolder(root=target_root, transform=transform_target)
         print("Performing SVHN->MNIST")
     elif opt.source == 'mnist' and opt.target == 'usps':
+        # source_train_root = os.path.join(opt.dataroot, 'mnist/trainset')
+        # source_val_root = os.path.join(opt.dataroot, 'mnist/testset')
         source_train_root = os.path.join(opt.dataroot, 'mnist/trainset')
         source_val_root = os.path.join(opt.dataroot, 'mnist/testset')
 
@@ -101,7 +102,8 @@ def main():
         target_train = usps.USPS(root=opt.dataroot, train=True, transform=transform_usps, download=True)
         print("Performing MNIST->USPS")
     elif opt.source == 'usps' and opt.target == 'mnist':
-        target_root = os.path.join(opt.dataroot, 'mnist/trainset')
+        # target_root = os.path.join(opt.dataroot, 'mnist/trainset')
+        target_root = os.path.join(opt.dataroot, 'mnist/testset')
 
         source_train = usps.USPS(root=opt.dataroot, train=True, transform=transform_usps, download=True)
         source_val = usps.USPS(root=opt.dataroot, train=False, transform=transform_usps, download=True)

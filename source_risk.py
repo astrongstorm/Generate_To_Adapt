@@ -66,10 +66,7 @@ def cross_validation_loss(feature_network_path, predict_network_path, src_cls_li
         val_input, val_labels = Variable(val_input), Variable(val_labels)
 
     pred_label = netC(netF(val_input))
-    print(pred_label)
-    print(pred_label.shape)
-    # _, pred_label = torch.max(outC.data, 1)
-    # _, pred_label = predict_network(val_input)
+
 
     w = pred_label[0].shape[0]
 
@@ -80,6 +77,7 @@ def cross_validation_loss(feature_network_path, predict_network_path, src_cls_li
         single_pred_label = pred_label[num_image]
         w = single_pred_label.shape[0]
         single_val_label = val_labels[num_image]
+
         error = np.append(error, [[predict_loss(single_val_label.item(), single_pred_label.reshape(1, w)).item()]],
                           axis=0)
 
@@ -90,8 +88,6 @@ def cross_validation_loss(feature_network_path, predict_network_path, src_cls_li
         else:
             val_input, val_labels = Variable(val_input), Variable(val_labels)
         pred_label = netC(netF(val_input))
-        # _, pred_label = torch.max(outC.data, 1)
-        # _, pred_label = predict_network(val_input)
         for num_image in range(len(pred_label)):
             single_pred_label = pred_label[num_image]
             w = single_pred_label.shape[0]
@@ -100,32 +96,4 @@ def cross_validation_loss(feature_network_path, predict_network_path, src_cls_li
                               axis=0)
 
     cross_val_loss = error.sum()
-    # for cls in range(class_num):
-    #
-    #     dsets_val = ImageList(val_cls_list[cls], transform=prep_dict_val)
-    #     dset_loaders_val = util_data.DataLoader(dsets_val, batch_size=batch_size, shuffle=True, num_workers=4)
-    #
-    #     # prepare validation feature and predicted label for validation
-    #     iter_val = iter(dset_loaders_val)
-    #     val_input, val_labels = iter_val.next()
-    #     if use_gpu:
-    #         val_input, val_labels = Variable(val_input).cuda(), Variable(val_labels).cuda()
-    #     else:
-    #         val_input, val_labels = Variable(val_input), Variable(val_labels)
-    #     val_feature, _ = feature_network(val_input)
-    #     _, pred_label = predict_network(val_input)
-    #     w, h = pred_label.shape
-    #     error = np.zeros(1)
-    #     error[0] = predict_loss(cls, pred_label.reshape(1, w*h)).numpy()
-    #     error = error.reshape(1,1)
-    #     for _ in range(len(val_cls_list[cls]) - 1):
-    #         val_input, val_labels = iter_val.next()
-    #         # val_feature1 = feature_network(val_input)
-    #         val_feature_new, _ = feature_network(val_input)
-    #         val_feature = np.append(val_feature, val_feature_new, axis=0)
-    #         error = np.append(error, [[predict_loss(cls, predict_network(val_input)[1]).numpy()]], axis=0)
-    #
-    #     print('The class is {}\n'.format(cls))
-    #
-    #     cross_val_loss = cross_val_loss + error.sum()
     return cross_val_loss
