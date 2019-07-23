@@ -78,7 +78,7 @@ class GTA(object):
         val_acc = 100*float(correct)/total
         print('%s| Epoch: %d, Val Accuracy: %f %%' % (datetime.datetime.now(), epoch, val_acc))
 
-        file_name = "Result_lr_%s_advweight_%s_alpha_%s_lrd_%s.txt" %(self.opt.lr, self.opt.adv_weight, self.opt.alpha, self.opt.lrd)
+        file_name = "%s/models/Result_lr_%s_advweight_%s_alpha_%s_lrd_%s.txt" %(self.opt.outf, self.opt.lr, self.opt.adv_weight, self.opt.alpha, self.opt.lrd)
         f = open(file_name, "a+")
         f.write('%s| Epoch: %d, Val Accuracy: %f %%' % (datetime.datetime.now(), epoch, val_acc))
         f.close()
