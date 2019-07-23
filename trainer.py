@@ -80,7 +80,7 @@ class GTA(object):
 
         file_name = "%s/models/Result_lr_%s_advweight_%s_alpha_%s_lrd_%s.txt" %(self.opt.outf, self.opt.lr, self.opt.adv_weight, self.opt.alpha, self.opt.lrd)
         f = open(file_name, "a+")
-        f.write('%s| Epoch: %d, Val Accuracy: %f %%' % (datetime.datetime.now(), epoch, val_acc))
+        f.write('%s| Epoch: %d, Val Accuracy: %f %%\n' % (datetime.datetime.now(), epoch, val_acc))
         f.close()
 
         # Saving checkpoints
