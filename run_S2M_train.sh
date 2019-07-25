@@ -1,0 +1,8 @@
+CUDA_VISIBLE_DEVICES=0 python main.py --dataroot digits --outf lr_0.001_adv_0.1_lrd_0.0001_alpha_0.5 --method GTA --lr 0.001 --adv_weight 0.1 --lrd 0.0001 --alpha 0.5 --target svhn --source mnist
+CUDA_VISIBLE_DEVICES=1 python main.py --dataroot digits --outf lr_0.0005_adv_0.1_lrd_0.0001_alpha_0.5 --method GTA --lr 0.0005 --adv_weight 0.1 --lrd 0.0001 --alpha 0.5 --target svhn --source mnist
+CUDA_VISIBLE_DEVICES=2 python main.py --dataroot digits --outf lr_0.001_adv_0.1_lrd_0.0001_alpha_1.0 --method GTA --lr 0.001 --adv_weight 0.1 --lrd 0.0001 --alpha 1.0 --target svhn --source mnist
+CUDA_VISIBLE_DEVICES=3 python main.py --dataroot digits --outf lr_0.0005_adv_0.1_lrd_0.0001_alpha_1.0 --method GTA --lr 0.0005 --adv_weight 0.1 --lrd 0.0001 --alpha 1.0 --target svhn --source mnist
+CUDA_VISIBLE_DEVICES=4 python main.py --dataroot digits --outf lr_0.001_adv_0.2_lrd_0.0001_alpha_0.5 --method GTA --lr 0.001 --adv_weight 0.2 --lrd 0.0001 --alpha 0.5 --target svhn --source mnist
+CUDA_VISIBLE_DEVICES=5 python main.py --dataroot digits --outf lr_0.0005_adv_0.2_lrd_0.0001_alpha_0.5 --method GTA --lr 0.0005 --adv_weight 0.2 --lrd 0.0001 --alpha 0.5 --target svhn --source mnist
+CUDA_VISIBLE_DEVICES=6 python main.py --dataroot digits --outf lr_0.001_adv_0.2_lrd_0.0001_alpha_1.0 --method GTA --lr 0.001 --adv_weight 0.2 --lrd 0.0001 --alpha 1.0 --target svhn --source mnist
+CUDA_VISIBLE_DEVICES=7 python main.py --dataroot digits --outf lr_0.0005_adv_0.2_lrd_0.0001_alpha_1.0 --method GTA --lr 0.0005 --adv_weight 0.2 --lrd 0.0001 --alpha 1.0 --target svhn --source mnist
