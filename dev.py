@@ -226,7 +226,7 @@ def get_label_list(target_list, feature_network_path, predict_network_path, resi
         [transforms.Resize(resize_size), transforms.ToTensor(), transforms.Normalize(mean, std)])
 
     dsets_tar = ImageList(target_list, transform=transform_target)
-    dset_loaders_tar = util_data.DataLoader(dsets_tar, batch_size=batch_size, shuffle=True, num_workers=4)
+    dset_loaders_tar = util_data.DataLoader(dsets_tar, batch_size=batch_size, shuffle=False, num_workers=4)
     len_train_target = len(dset_loaders_tar)
     iter_target = iter(dset_loaders_tar)
     count = 0
@@ -241,7 +241,11 @@ def get_label_list(target_list, feature_network_path, predict_network_path, resi
         predict_score = netC(netF(input_tar))
         _, predict_label = torch.max(predict_score, 1)
         for num in range(len(predict_label.cpu())):
-            label_list.append(target_list[count][:-2])
+            if target_list[count][-3] == ' ':
+                ind = -2
+            else:
+                ind = -3
+            label_list.append(target_list[count][:ind])
             label_list[count] = label_list[count] + str(predict_label[num].cpu().numpy() + 1) + "\n"
             count += 1
     return label_list
@@ -283,7 +287,7 @@ def cross_validation_loss(feature_network_path, predict_network_path, src_cls_li
 
 
     # seperate the class
-    for i in range(1, class_num + 1):
+    for i in range(class_num):
         tar_cls_list.append([j for j in target_list if int(j.split(" ")[1].replace("\n", "")) == i])
     # load different class's image
     for cls in range(class_num):
