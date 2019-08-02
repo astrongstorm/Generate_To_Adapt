@@ -1,0 +1,7 @@
+需要安装pytorch（torch 和torchvision）没有版本限制
+数据集下载路径：
+http://www.cs.umd.edu/~yogesh/datasets/digits.zip
+unzip digits.zip 解压
+源代码路径：
+https://github.com/astrongstorm/Generate_To_Adapt
+结果 包括accuracy和network的weight都在 跑程序时paser处指定的 folder中 长成这个样子。lr_*_adv_*_lrd_*_alpha_*
